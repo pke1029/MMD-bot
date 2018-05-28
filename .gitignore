@@ -99,3 +99,4 @@ ENV/
 .mypy_cache/
 config.py
 no_repost_list.txt
+praw.ini
