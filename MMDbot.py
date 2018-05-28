@@ -89,6 +89,8 @@ def get_saved_id():
 def run_bot(reddit, subreddit, no_repost_list):
     vid_id_list = bot_search()
 
+    post = False
+
     # check video id to previous submission
     for vid_id in vid_id_list:
         if vid_id not in no_repost_list:
@@ -97,9 +99,10 @@ def run_bot(reddit, subreddit, no_repost_list):
             post_title = "id:" + vid_id + " [NSFW]"
 
             # submit link
-            submit = subreddit.submit(title=post_title,
-                                      url=url,
-                                      send_replies=False)
+            submission = subreddit.submit(title=post_title,
+                                          url=url,
+                                          send_replies=False)
+            post = True
             print("Sumbission posted")
 
             # save video id to make sure to not repost
@@ -118,14 +121,14 @@ def run_bot(reddit, subreddit, no_repost_list):
                          "^[GitHub](https://github.com/pke1029/MMD-bot)")
 
             # post video info in comment
-            submission = reddit.submission(id=submit.id)
             submission.reply(post_info)
             print("Comment posted")
 
             break
 
-    # in case of no new MMD found
-    print("No new MMD found.")
+    # in case no new MMD found
+    if post is False:
+        print("No new video found")
 
 
 def main():
