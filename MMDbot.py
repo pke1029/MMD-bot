@@ -89,9 +89,8 @@ def get_saved_id():
 def run_bot(reddit, subreddit, no_repost_list):
     vid_id_list = bot_search()
 
-    post = False
-
     # check video id to previous submission
+    post = False
     for vid_id in vid_id_list:
         if vid_id not in no_repost_list:
 
@@ -117,7 +116,7 @@ def run_bot(reddit, subreddit, no_repost_list):
                          "**Submission time:** " + vid_time + "\n\n "
                          "---" "\n\n "
                          "I am a bot, and this action "
-                         "was performed automagically."
+                         "was performed automagically. "
                          "^[GitHub](https://github.com/pke1029/MMD-bot)")
 
             # post video info in comment
@@ -136,11 +135,15 @@ def main():
     reddit = authenticate()
     # go to subreddit
     subreddit = reddit.subreddit("test")
-    # list previously posted video
-    no_repost_list = get_saved_id()
-    # search, post and comment
-    run_bot(reddit, subreddit, no_repost_list)
-    print("End of program. Developed by r/pke1029")
+    while True:
+        # list previously posted video
+        no_repost_list = get_saved_id()
+        # search, post and comment
+        run_bot(reddit, subreddit, no_repost_list)
+        # sleep for 15 minutes
+        print("Sleeping...")
+        time.sleep(900)
+        # print("End of program. Developed by r/pke1029")
 
 
 if __name__ == "__main__":
