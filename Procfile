@@ -1,1 +1,1 @@
-worker: python MMDbot.py
+worker: python redditbot.py
