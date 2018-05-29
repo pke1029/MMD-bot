@@ -66,7 +66,12 @@ def bot_info(video_id):
 # authenticate reddit login
 def authenticate():
     print("Authenticating...")
-    reddit = praw.Reddit("MMDbot", user_agent="Bilibili MMD Reddit bot v0.1")
+
+    # reddit = praw.Reddit("MMDbot", user_agent="Bilibili MMD Reddit bot v0.1")
+    
+    reddit = praw.Reddit(user_agent='Bilibili MMD Reddit bot v0.1')
+    reddit.login(os.environ['bot1_user'], os.environ['bot1_pass'])
+
     print("Authenticating as {}".format(reddit.user.me()))
 
     return reddit
@@ -74,15 +79,18 @@ def authenticate():
 
 # read file containing video id of all previous submission
 def get_saved_id():
-    if not os.path.isfile("no_repost_list.txt"):
-        no_repost_list = []
-    else:
-        with open("no_repost_list.txt", "r") as f:
-            no_repost_list = f.read()
-            no_repost_list = no_repost_list.split("\n")
-            # no_repost_list = filter(None, no_repost_list)
 
-    return no_repost_list
+    # if not os.path.isfile("no_repost_list.txt"):
+    #     no_repost_list = []
+    # else:
+    #     with open("no_repost_list.txt", "r") as f:
+    #         no_repost_list = f.read()
+    #         no_repost_list = no_repost_list.split("\n")
+    #         # no_repost_list = filter(None, no_repost_list)
+
+    # return no_repost_list
+
+    return []
 
 
 # search, post and comment
@@ -104,10 +112,10 @@ def run_bot(reddit, subreddit, no_repost_list):
             post = True
             print("Sumbission posted")
 
-            # save video id to make sure to not repost
-            no_repost_list.append(vid_id)
-            with open("no_repost_list.txt", "a") as f:
-                f.write(vid_id + "\n")
+            # # save video id to make sure to not repost
+            # no_repost_list.append(vid_id)
+            # with open("no_repost_list.txt", "a") as f:
+            #     f.write(vid_id + "\n")
 
             # get video info
             vid_title, vid_user, vid_time = bot_info(vid_id)
