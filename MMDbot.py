@@ -2,8 +2,8 @@
 # by u/pke1029
 
 
-# import requests
-# from bs4 import BeautifulSoup
+import requests
+from bs4 import BeautifulSoup
 import praw
 import time
 import os
@@ -70,7 +70,7 @@ def authenticate():
     # reddit = praw.Reddit("MMDbot", user_agent="Bilibili MMD Reddit bot v0.1")
     
     reddit = praw.Reddit(user_agent='Bilibili MMD Reddit bot v0.1')
-    reddit.login(os.environ['BOT1_USERNAME'], os.environ['BOT1_PASSWORD'])
+    reddit.login(os.environ['bot1_user'], os.environ['bot1_pass'])
 
     print("Authenticating as {}".format(reddit.user.me()))
 
