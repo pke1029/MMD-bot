@@ -10,30 +10,101 @@ import os
 
 
 # search for MMD video from Bilibili daily ranking and list the video IDs
-def bot_search():
+def bot_get_vid_id():
     print("Obtaining video id...")
+    
     # url for Bilibili "douga" category daily ranking
     url = "https://www.bilibili.com/ranking/all/1/0/1"
 
+    tries = 1
+    while True:
+        try:
+            respond = requests.get(url)
+            print('in %d try(s)' % tries)
+            break
+        except:
+            tries += 1
+            time.sleep(5)
+
     # making soup
-    respond = requests.get(url)
     data = respond.text
     soup = BeautifulSoup(data, "lxml")
     ranking = soup.find_all('div', class_="info")
 
     vid_id_list = []
 
-    # search for top submission with title containing "MMD" and get video id
+    # obtain all video id
     for div in ranking:
-        if "MMD" in div.a.text.upper():
-            link = "https:" + div.a.get("href")
-            char_list = list(link)
-            video_id = "".join(char_list[-9:-1])
-            vid_id_list.append(video_id)
+        link = "https:" + div.a.get("href")
+        char_list = list(link)
+        video_id = "".join(char_list[-9:-1])
+        vid_id_list.append(video_id)
 
-    print("Video id obtained, %d found" % len(vid_id_list))
+    print("Video id obtained")
 
     return vid_id_list
+
+        
+
+
+# check if video is taged as mmd
+def is_mmd(vid_id):
+    print('checking %s ...' % vid_id)
+    url = "https://www.bilibili.com/video/av" + vid_id + "/"
+
+    tries = 1
+    while True:
+        try:
+            respond = requests.get(url)
+            print('in %d try(s)' % tries)
+            break
+        except:
+            tries += 1
+            time.sleep(5)
+
+    data = respond.text
+    soup = BeautifulSoup(data, "lxml")
+
+    # get video tag
+    tag_list = []
+    tag_li = soup.find_all('li', class_="tag")
+    for li in tag_li:
+        tag_list.append(li.text)
+
+    # check if video is taged as mmd
+    if 'MMD.3D' in tag_list:
+        print('%s is mmd, took %d tries' % (vid_id, tries))
+        return True
+    else:
+        print('%s is not mmd, took %d tries' % (vid_id, tries))
+        return False
+
+
+def search_mmd(vid_id_list, no_repost_list, not_mmd_id):
+    print('searching for mmd...')
+    vid_id_list_filtered = []
+
+    rank = 1
+    for vid_id in vid_id_list:
+        if vid_id not in not_mmd_id and vid_id not in no_repost_list:
+
+            # check if is mmd
+            if is_mmd(vid_id):
+                print('rank = %d' % rank)
+                return vid_id
+
+            else:
+                not_mmd_id.append(vid_id)
+                with open("not_mmd_id.txt", "a") as f:
+                    f.write(vid_id + "\n")
+                rank += 1
+
+        else:
+            rank += 1
+
+    # if no new mmd found
+    print("no new mmd found")
+    return False
 
 
 # find the submitter name and submission time
@@ -41,8 +112,16 @@ def bot_info(video_id):
     print("Obtaining video info...")
     url = "https://www.bilibili.com/video/av" + video_id + "/"
 
-    # making soup
-    respond = requests.get(url)
+    tries = 1
+    while True:
+        try:
+            respond = requests.get(url)
+            print('in %d try(s)' % tries)
+            break
+        except:
+            tries += 1
+            time.sleep(5)
+
     data = respond.text
     soup = BeautifulSoup(data, "lxml")
 
@@ -58,7 +137,7 @@ def bot_info(video_id):
     # vid_views = view_div.span.get("title")
 
     print("Video info obtained \n title: %s submitter: %s time: %s"
-          % (vid_title, vid_user, vid_time))
+        % (vid_title, vid_user, vid_time))
 
     return vid_title, vid_user, vid_time
 
@@ -80,20 +159,32 @@ def get_saved_id():
         with open("no_repost_list.txt", "r") as f:
             no_repost_list = f.read()
             no_repost_list = no_repost_list.split("\n")
-            # no_repost_list = filter(None, no_repost_list)
 
     return no_repost_list
 
 
+def get_not_mmd_id():
+    if not os.path.isfile("not_mmd_id.txt"):
+        not_mmd_id = []
+    else:
+        with open("not_mmd_id.txt", "r") as f:
+            not_mmd_id = f.read()
+            not_mmd_id = not_mmd_id.split("\n")
+
+    return not_mmd_id
+
+
 # search, post and comment
-def run_bot(reddit, subreddit, no_repost_list):
-    vid_id_list = bot_search()
+def run_bot(reddit, subreddit, no_repost_list, not_mmd_id):
+    vid_id_list = bot_get_vid_id()
 
-    # check video id to previous submission
-    post = False
-    for vid_id in vid_id_list:
-        if vid_id not in no_repost_list:
-
+    search = True
+    while search is True:
+        # search mmd
+        vid_id = search_mmd(vid_id_list, no_repost_list, not_mmd_id)
+        
+        # if mmd found
+        if vid_id is not False:
             url = "https://www.bilibili.com/video/av" + vid_id + "/"
             post_title = "id:" + vid_id + " [NSFW]"
 
@@ -101,7 +192,6 @@ def run_bot(reddit, subreddit, no_repost_list):
             submission = subreddit.submit(title=post_title,
                                           url=url,
                                           send_replies=False)
-            post = True
             print("Sumbission posted")
 
             # save video id to make sure to not repost
@@ -123,11 +213,10 @@ def run_bot(reddit, subreddit, no_repost_list):
             submission.reply(post_info)
             print("Comment posted")
 
-            break
+            search = False
 
-    # in case no new MMD found
-    if post is False:
-        print("No new video found")
+        else:
+            search = False
 
 
 def main():
@@ -135,14 +224,16 @@ def main():
     reddit = authenticate()
     # go to subreddit
     subreddit = reddit.subreddit("test")
+    # list previously posted video
+    no_repost_list = get_saved_id()
+    # list checked not mmd video
+    not_mmd_id = get_not_mmd_id()
     while True:
-        # list previously posted video
-        no_repost_list = get_saved_id()
         # search, post and comment
-        run_bot(reddit, subreddit, no_repost_list)
+        run_bot(reddit, subreddit, no_repost_list, not_mmd_id)
         # sleep for 15 minutes
         print("Sleeping...")
-        time.sleep(900)
+        time.sleep(960)
         # print("End of program. Developed by r/pke1029")
 
 
