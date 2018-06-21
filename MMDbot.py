@@ -9,6 +9,34 @@ import time
 import os
 
 
+# authenticate reddit login
+def authenticate():
+    print("\nAuthenticating...")
+    reddit = praw.Reddit("MMDbot", user_agent="Bilibili MMD Reddit bot v0.1")
+    print("Authenticating as {}".format(reddit.user.me()))
+
+    return reddit
+
+
+# read file containing video id of all previous submission
+def get_saved_id():
+    if not os.path.isfile("no_repost_list.txt"):
+        no_repost_list = []
+    else:
+        with open("no_repost_list.txt", "r") as f:
+            no_repost_list = f.read()
+            no_repost_list = no_repost_list.split("\n")
+
+    if not os.path.isfile("not_mmd_id.txt"):
+        not_mmd_id = []
+    else:
+        with open("not_mmd_id.txt", "r") as f:
+            not_mmd_id = f.read()
+            not_mmd_id = not_mmd_id.split("\n")
+
+    return no_repost_list, not_mmd_id
+
+
 # search for MMD video from Bilibili daily ranking and list the video IDs
 def bot_get_vid_id():
     print("Obtaining video id...")
@@ -16,14 +44,11 @@ def bot_get_vid_id():
     # url for Bilibili "douga" category daily ranking
     url = "https://www.bilibili.com/ranking/all/1/0/1"
 
-    tries = 1
     while True:
         try:
             respond = requests.get(url)
-            print('in %d try(s)' % tries)
             break
         except:
-            tries += 1
             time.sleep(5)
 
     # making soup
@@ -44,22 +69,17 @@ def bot_get_vid_id():
 
     return vid_id_list
 
-        
-
 
 # check if video is taged as mmd
 def is_mmd(vid_id):
-    print('checking %s ...' % vid_id)
+    print('checking %s ...' % vid_id, end='')
     url = "https://www.bilibili.com/video/av" + vid_id + "/"
 
-    tries = 1
     while True:
         try:
             respond = requests.get(url)
-            print('in %d try(s)' % tries)
             break
         except:
-            tries += 1
             time.sleep(5)
 
     data = respond.text
@@ -73,10 +93,10 @@ def is_mmd(vid_id):
 
     # check if video is taged as mmd
     if 'MMD.3D' in tag_list:
-        print('%s is mmd, took %d tries' % (vid_id, tries))
+        print('O')
         return True
     else:
-        print('%s is not mmd, took %d tries' % (vid_id, tries))
+        print('X')
         return False
 
 
@@ -112,14 +132,11 @@ def bot_info(video_id):
     print("Obtaining video info...")
     url = "https://www.bilibili.com/video/av" + video_id + "/"
 
-    tries = 1
     while True:
         try:
             respond = requests.get(url)
-            print('in %d try(s)' % tries)
             break
         except:
-            tries += 1
             time.sleep(5)
 
     data = respond.text
@@ -140,38 +157,6 @@ def bot_info(video_id):
         % (vid_title, vid_user, vid_time))
 
     return vid_title, vid_user, vid_time
-
-
-# authenticate reddit login
-def authenticate():
-    print("Authenticating...")
-    reddit = praw.Reddit("MMDbot", user_agent="Bilibili MMD Reddit bot v0.1")
-    print("Authenticating as {}".format(reddit.user.me()))
-
-    return reddit
-
-
-# read file containing video id of all previous submission
-def get_saved_id():
-    if not os.path.isfile("no_repost_list.txt"):
-        no_repost_list = []
-    else:
-        with open("no_repost_list.txt", "r") as f:
-            no_repost_list = f.read()
-            no_repost_list = no_repost_list.split("\n")
-
-    return no_repost_list
-
-
-def get_not_mmd_id():
-    if not os.path.isfile("not_mmd_id.txt"):
-        not_mmd_id = []
-    else:
-        with open("not_mmd_id.txt", "r") as f:
-            not_mmd_id = f.read()
-            not_mmd_id = not_mmd_id.split("\n")
-
-    return not_mmd_id
 
 
 # search, post and comment
@@ -224,16 +209,15 @@ def main():
     reddit = authenticate()
     # go to subreddit
     subreddit = reddit.subreddit("test")
-    # list previously posted video
-    no_repost_list = get_saved_id()
-    # list checked not mmd video
-    not_mmd_id = get_not_mmd_id()
+    # list previously posted video and checked video
+    no_repost_list, not_mmd_id = get_saved_id()
     while True:
         # search, post and comment
         run_bot(reddit, subreddit, no_repost_list, not_mmd_id)
         # sleep for 15 minutes
         print("Sleeping...")
         time.sleep(960)
+        # time.sleep(86400)     # 24hr
         # print("End of program. Developed by r/pke1029")
 
 
