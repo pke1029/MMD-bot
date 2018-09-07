@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 import praw
+import datetime
 import time
 import os
 
@@ -28,7 +29,9 @@ def make_soup(url):
 
 def make_soup_js(url):
 
-    driver = webdriver.Chrome()
+    # driver = webdriver.Chrome()
+    driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver')
+    
     while True:
         try:
             driver.get(url)
@@ -172,8 +175,16 @@ def main():
     nico_post_list = get_nico_post_list()
     while True:
         run_search_nico(reddit, subreddit, nico_post_list)
-        time.sleep(960)
-    
+
+        # sleep until next posting time 
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        next_post_time = datetime.combine(tomorrow, datetime.time(0, 0, 0))
+        current_time = datetime.datetime.now()
+        duration = next_post_time - current_time
+        duration_second = duration.seconds
+        print('sleeping for ' + duration + '...')
+        time.sleep(duration_second)
+
 
 if __name__ == "__main__":
     try:

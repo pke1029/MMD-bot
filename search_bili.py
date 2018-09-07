@@ -5,6 +5,7 @@
 import requests
 from bs4 import BeautifulSoup
 import praw
+import datetime
 import time
 import os
 
@@ -196,10 +197,15 @@ def main():
     while True:
         # search, post and comment
         run_bot(reddit, subreddit, bili_post_list)
-        # sleep for 15 minutes
-        print("Sleeping...")
-        time.sleep(960)         # 16min
-        # time.sleep(86400)     # 24hr
+        
+        # sleep until next posting time 
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        next_post_time = datetime.combine(tomorrow, datetime.time(0, 0, 0))
+        current_time = datetime.datetime.now()
+        duration = next_post_time - current_time
+        duration_second = duration.seconds
+        print('sleeping for ' + duration + '...')
+        time.sleep(duration_second)
 
 
 if __name__ == "__main__":
