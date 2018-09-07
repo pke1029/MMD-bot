@@ -18,72 +18,67 @@ def authenticate():
     return reddit
 
 
-# read file containing video id of all previous submission
-def get_saved_id():
-    if not os.path.isfile("no_repost_list.txt"):
-        no_repost_list = []
+# read file containing video id of all previous submissions
+def get_bili_post_list():
+    if not os.path.isfile("bili_post_list.txt"):
+        bili_post_list = []
     else:
-        with open("no_repost_list.txt", "r") as f:
-            no_repost_list = f.read()
-            no_repost_list = no_repost_list.split("\n")
+        with open("bili_post_list.txt", "r") as f:
+            bili_post_list = f.read()
+            bili_post_list = bili_post_list.split("\n")
 
-    if not os.path.isfile("not_mmd_id.txt"):
-        not_mmd_id = []
-    else:
-        with open("not_mmd_id.txt", "r") as f:
-            not_mmd_id = f.read()
-            not_mmd_id = not_mmd_id.split("\n")
-
-    return no_repost_list, not_mmd_id
+    return bili_post_list
 
 
-# search for MMD video from Bilibili daily ranking and list the video IDs
-def bot_get_vid_id():
-    print("Obtaining video id...")
-    
-    # url for Bilibili "douga" category daily ranking
-    url = "https://www.bilibili.com/ranking/all/1/0/1"
+def make_soup(url):
 
     while True:
         try:
             respond = requests.get(url)
             break
         except:
+            print("access denined")
             time.sleep(5)
 
-    # making soup
     data = respond.text
     soup = BeautifulSoup(data, "lxml")
+
+    return soup
+
+
+# search for MMD video from Bilibili daily ranking and list the video IDs
+def get_bili_id_list():
+    print("Obtaining video id...")
+    
+    # url for Bilibili "douga" category ranking
+    # url = "https://www.bilibili.com/ranking/all/1/0/1"      # daily
+    url = "https://www.bilibili.com/ranking/all/1/0/3"      # three day
+    # url = "https://www.bilibili.com/ranking/all/1/0/7"      # weekly
+    # url = "https://www.bilibili.com/ranking/all/1/0/30"     # monthly
+
+    soup = make_soup(url)
     ranking = soup.find_all('div', class_="info")
 
-    vid_id_list = []
+    bili_id_list = []
 
     # obtain all video id
     for div in ranking:
         link = "https:" + div.a.get("href")
         char_list = list(link)
-        video_id = "".join(char_list[-9:-1])
-        vid_id_list.append(video_id)
+        bili_id = "".join(char_list[-11:-1])
+        bili_id_list.append(bili_id)
 
     print("Video id obtained")
 
-    return vid_id_list
+    return bili_id_list
 
 
 # check if video is taged as mmd
-def is_mmd(vid_id):
-    print('checking %s ...' % vid_id, end='')
-    url = "https://www.bilibili.com/video/av" + vid_id + "/"
+def is_mmd(bili_id):
+    print('checking %s ...' % bili_id, end='')
+    url = "https://www.bilibili.com/video/" + bili_id + "/"
 
-    while True:
-        try:
-            respond = requests.get(url)
-            break
-        except:
-            time.sleep(5)
-
-    data = respond.text
-    soup = BeautifulSoup(data, "lxml")
+    soup = make_soup(url)
 
     # get video tag
     tag_list = []
@@ -91,7 +86,7 @@ def is_mmd(vid_id):
     for li in tag_li:
         tag_list.append(li.text)
 
-    # check if video is taged as mmd
+    # O if is mmd, X if not
     if 'MMD.3D' in tag_list:
         print('O')
         return True
@@ -100,24 +95,18 @@ def is_mmd(vid_id):
         return False
 
 
-def search_mmd(vid_id_list, no_repost_list, not_mmd_id):
+def search_mmd(bili_id_list, bili_post_list):
     print('searching for mmd...')
-    vid_id_list_filtered = []
 
+    # keep track ranking
     rank = 1
-    for vid_id in vid_id_list:
-        if vid_id not in not_mmd_id and vid_id not in no_repost_list:
 
-            # check if is mmd
-            if is_mmd(vid_id):
-                print('rank = %d' % rank)
-                return vid_id
+    for bili_id in bili_id_list:
+        # check if video has been posted or not
+        if bili_id not in bili_post_list and is_mmd(bili_id):
 
-            else:
-                not_mmd_id.append(vid_id)
-                with open("not_mmd_id.txt", "a") as f:
-                    f.write(vid_id + "\n")
-                rank += 1
+            print('rank = %d' % rank)
+            return bili_id
 
         else:
             rank += 1
@@ -128,19 +117,11 @@ def search_mmd(vid_id_list, no_repost_list, not_mmd_id):
 
 
 # find the submitter name and submission time
-def bot_info(video_id):
+def bot_info(bili_id):
     print("Obtaining video info...")
-    url = "https://www.bilibili.com/video/av" + video_id + "/"
+    url = "https://www.bilibili.com/video/" + bili_id + "/"
 
-    while True:
-        try:
-            respond = requests.get(url)
-            break
-        except:
-            time.sleep(5)
-
-    data = respond.text
-    soup = BeautifulSoup(data, "lxml")
+    soup = make_soup(url)
 
     # webpage scraping for video infomation
     title_div = soup.find('div', id="viewbox_report")
@@ -160,18 +141,19 @@ def bot_info(video_id):
 
 
 # search, post and comment
-def run_bot(reddit, subreddit, no_repost_list, not_mmd_id):
-    vid_id_list = bot_get_vid_id()
+def run_bot(reddit, subreddit, bili_post_list):
+    bili_id_list = get_bili_id_list()
 
     search = True
     while search is True:
         # search mmd
-        vid_id = search_mmd(vid_id_list, no_repost_list, not_mmd_id)
+        bili_id = search_mmd(bili_id_list, bili_post_list)
         
         # if mmd found
-        if vid_id is not False:
-            url = "https://www.bilibili.com/video/av" + vid_id + "/"
-            post_title = "id:" + vid_id + " [NSFW]"
+        if bili_id is not False:
+            url = "https://www.bilibili.com/video/" + bili_id + "/"
+            # post_title = "id:" + bili_id + " [NSFW]"
+            post_title = "id:" + bili_id
 
             # submit link
             submission = subreddit.submit(title=post_title,
@@ -180,12 +162,12 @@ def run_bot(reddit, subreddit, no_repost_list, not_mmd_id):
             print("Sumbission posted")
 
             # save video id to make sure to not repost
-            no_repost_list.append(vid_id)
-            with open("no_repost_list.txt", "a") as f:
-                f.write(vid_id + "\n")
+            bili_post_list.append(bili_id)
+            with open("bili_post_list.txt", "a") as f:
+                f.write(bili_id + "\n")
 
             # get video info
-            vid_title, vid_user, vid_time = bot_info(vid_id)
+            vid_title, vid_user, vid_time = bot_info(bili_id)
             post_info = ("**Title:** " + vid_title + "\n\n "
                          "**Submitter:** " + vid_user + "\n\n "
                          "**Submission time:** " + vid_time + "\n\n "
@@ -210,16 +192,18 @@ def main():
     # go to subreddit
     subreddit = reddit.subreddit("test")
     # list previously posted video and checked video
-    no_repost_list, not_mmd_id = get_saved_id()
+    bili_post_list = get_bili_post_list()
     while True:
         # search, post and comment
-        run_bot(reddit, subreddit, no_repost_list, not_mmd_id)
+        run_bot(reddit, subreddit, bili_post_list)
         # sleep for 15 minutes
         print("Sleeping...")
-        time.sleep(960)
+        time.sleep(960)         # 16min
         # time.sleep(86400)     # 24hr
-        # print("End of program. Developed by r/pke1029")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        print('\nEnd of programme, developed by pke1029')
