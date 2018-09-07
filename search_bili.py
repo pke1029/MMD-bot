@@ -121,9 +121,9 @@ def search_mmd(bili_id_list, bili_post_list):
 def bot_info(bili_id):
     print("Obtaining video info...")
     url = "https://www.bilibili.com/video/" + bili_id + "/"
-
+    
     soup = make_soup(url)
-
+    
     # webpage scraping for video infomation
     title_div = soup.find('div', id="viewbox_report")
     user_div = soup.find('div', class_="user clearfix")
@@ -191,7 +191,8 @@ def main():
     # authenticate login
     reddit = authenticate()
     # go to subreddit
-    subreddit = reddit.subreddit("test")
+    # subreddit = reddit.subreddit("test")
+    subreddit = reddit.subreddit("mikumikudance")
     # list previously posted video and checked video
     bili_post_list = get_bili_post_list()
     while True:
@@ -200,11 +201,11 @@ def main():
         
         # sleep until next posting time 
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        next_post_time = datetime.combine(tomorrow, datetime.time(0, 0, 0))
+        next_post_time = datetime.datetime.combine(tomorrow, datetime.time(8, 0, 0))
         current_time = datetime.datetime.now()
         duration = next_post_time - current_time
         duration_second = duration.seconds
-        print('sleeping for ' + duration + '...')
+        print('sleeping for', duration, '...')
         time.sleep(duration_second)
 
 
