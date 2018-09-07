@@ -101,3 +101,4 @@ config.py
 no_repost_list.txt
 praw.ini
 not_mmd_id.txt
+bili_post_list.txt
